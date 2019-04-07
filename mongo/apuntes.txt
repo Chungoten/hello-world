@@ -1,0 +1,106 @@
+./mongod	--> Arranque Mongo
+	--port <number>
+./mongo		--> Conexión cliente
+	--port <number>
+
+show dbs	--> Muestra bases de datos
+use <db>	--> Selecciona base de datos
+
+Databases -> Collections -> Documents
+JSON --> BSON (Binary SON, efficient storage)
+Array --> [{...},{...},{...}]
+
+CRUD (Create Read, Update, Delete) Operations:
+	Create:
+		insertOne(data, options)
+		insertMany(data, options)
+		- _id (Identificador unico implicito)
+	Read:
+		find(filter, options) --> Es un cursor que retorno por defecto los primeror 20 registros que cumplen el filtro
+		findOne(filter, options) --> Returns the first matched document (.pretty() not supported)
+	Update:
+		updateOne(filter, data, options) --> Update the first matched document
+			- data -> {$word{document}}
+		updateMany(filter, data, options) --> Update all matched documents
+			- data -> {$word{document}}
+		update(filter, data, options) --> Reemplaza todo el objeto menos el _id
+			- data -> {document}
+		replaceOne(filter, data, options)
+	Delete:
+		deleteOne(filter, data) --> Delete the first matched document
+		deleteMany(filter, data)
+
+
+CRUD Examples:
+	Create:
+		db.<collection>.insertOne({name: "Max", age: 29, male: true})
+			- Insert document
+		db.<collection>.insertMany([{name: "Max", age: 29, male: true},{{name: "Jane", age: 25, male: false}}])
+			- Insert many documents
+		Embedded Documents: Se pueden anidar documents con un maximo de 100 niveles, un document puede ocupar como maximo 16mb
+	Read:
+		db.<collection>.find()
+			- Devuelve todo (Es un cursor, solo devuelve los primeros 20 elementos)
+		db.<collection>.find({name : "Max"})
+			- Devuelve todo lo que coincide con el criterio
+		db.<collection>.find({distance: {$gt: 26}})
+			- Devuelve todos los documentos con distance > 26
+		db.<collection>.find().pretty()
+			- Devuelve todo con formato mas comodo para leer
+		db.<collection>.find().toArray()
+			- Muestra la salida como un array y muestra todos los elementos (No solo los 20 primeros)
+		db.<collection>.find().forEach((personData) => {printjson(personData)})
+			- Hacer un printa el json de cada document (Es como JS) 
+			- No se limita a los 20 primeros objetos
+			- No carga los datos en memoria por lo que es eficiente
+		Projection: Mostrar solo los campos/datos que necesitamos (no el objeto entero)
+		db.<collection>.find({},{name: 1}).pretty()
+			- Devuelve todo pero solo muestra el campo "name" (y el campo "_id" que se muestra siempre por defecto)
+		db.<collection>.find({},{name: 1, _id: -0}).pretty()
+			- Devuelve todo pero solo muestra el campo "name" (el campo "_id" hemos hecho que no se muestre explicitamente)
+		Array:
+		db.<collection>.findOne({name: "Max"}).hobbies
+			- Devuelve el contenido del campo "hobbies" (es un array)
+		db.<collection>.find({hobbies: "sports"}).pretty()
+			- Devuelve los documents que tienen "sports" en el array "hobbies"
+			{
+				"name": "Max",
+				"hobbies": ["cooking","football"]
+			}
+		db.<collection>.find({"hobbies.sports": "football"}).pretty()
+			- Devuelve los documents que tienen "football" dentro de "sports", dentro de "hobbies"
+			{
+				"name": "Max",
+				"hobbies": 
+				{
+					"sports": s"football"
+				}
+			}
+	Update:
+		db.<collection>.updateOne({name: "Max"}, {$set: {marker: "delete"}})
+			- Actualiza el primer documento con criterio (name = "Max"), si el objeto name existe lo modifica, y si no existe lo crea
+		db.<collection>.updateMany({}, {$set: {marker: "toDelete"}})
+			- Actualiza todos los documentos con criterio (marker = "toDelete"), si el objeto marker existe lo modifica, y si no existe lo crea
+		db.<collection>.update({}, {marker: "toDelete"})
+			- Reemplaza todos los documents que cumplen el criterio (marker = "toDelete") por el nuevo que se pasa, menos el _id
+		db.<collection>.replaceOne({}, {marker: "toDelete"})
+			- Reemplaza el primer document que cumple el criterio (marker = "toDelete") por el nuevo que se pasa, menos el _id
+		Array:
+		db.<collection>.updateOne({name: "Max"}, {$set: {hobbies: ["sports","cooking"]}})
+			- Actualiza el primer documento con criterio (name = "Max"), introduciendo un Array
+		
+	Delete:
+		db.<collection>.deleteOne({name: "Max"})
+			- Delete first matched document
+		db.<collection>.deleteMany({marker: "toDelete"})
+			- Delete all matched documents
+
+
+Assignment
+---------------------
+db.patients.insertOne({ "firstName": "Leo", "lastName": "Messi", "age": 32, "history": [ {"disease": "cold", "treatment": "rest"}, {"disease": "flu", "treatment": "rest", "pills": ["ibcuprofeno","paracetamol"]} ] })
+db.patients.insertOne({ "firstName": "Ter", "lastName": "Steggen", "age": 26, "history": [ {"disease": "Back pain", "treatment": ["Stay active","Back exercises and stretches"]}, {"disease": "Broken leg", "treatment": ["Immobilisation","Reduction"]} ] })
+db.patients.insertOne({ "firstName": "Jordi", "lastName": "Alba", "age": 23, "history": [ {"disease": "Shoulder pain", "treatment": { "do": ["stay active and gently move your shoulder","sit with a cushion behind your lower back"], "dont": ["do not do things that seem to make it worse","do not slouch when sitting"]}}, {"disease": "Tendonitis", "treatment": ["Rest","Ice","Compress"]} ] })
+db.patients.updateOne({"firstName": "Jordi", "lastName": "Alba"}, {$set: {"firstName": "Jorge", "lastName": "Albarez", "age": 25, "history": [{"disease": "Tennis elbow", "treatement": "Painkillers and NSAIDs"}]}})
+db.patients.find({"age": {$gt:30}}).pretty()
+db.patients.deleteOne({"history.disease": "cold"})
